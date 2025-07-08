@@ -1,5 +1,5 @@
 using CQRS.Core.Exceptions;
-using CQRS.Core.Infrastructure;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Post.Cmd.Api.Commands;
 using Post.Common.DTOs;
@@ -11,12 +11,12 @@ namespace Post.Cmd.Api.Controllers;
 public class AddCommentController : ControllerBase
 {
     private readonly ILogger<AddCommentController> _logger;
-    private readonly ICommandDispatcher _commandDispatcher;
+    private readonly IMediator _mediator;
 
-    public AddCommentController(ILogger<AddCommentController> logger, ICommandDispatcher commandDispatcher)
+    public AddCommentController(ILogger<AddCommentController> logger, IMediator mediator)
     {
         _logger = logger;
-        _commandDispatcher = commandDispatcher;
+        _mediator = mediator;
     }
 
     [HttpPut("{id}")]
@@ -25,7 +25,7 @@ public class AddCommentController : ControllerBase
         try
         {
             command.Id = id;
-            await _commandDispatcher.SendAsync(command);
+            await _mediator.Send(command);
 
             return Ok(new BaseResponse
             {

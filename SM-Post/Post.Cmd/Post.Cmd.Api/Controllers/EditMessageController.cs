@@ -1,5 +1,5 @@
 using CQRS.Core.Exceptions;
-using CQRS.Core.Infrastructure;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Post.Cmd.Api.Commands;
 using Post.Common.DTOs;
@@ -11,12 +11,12 @@ namespace Post.Cmd.Api.Controllers
     public class EditMessageController : ControllerBase
     {
         private readonly ILogger<EditMessageController> _logger;
-        private readonly ICommandDispatcher _commandDispatcher;
+        private readonly IMediator _mediator;
 
-        public EditMessageController(ILogger<EditMessageController> logger, ICommandDispatcher commandDispatcher)
+        public EditMessageController(ILogger<EditMessageController> logger, IMediator mediator)
         {
             _logger = logger;
-            _commandDispatcher = commandDispatcher;
+            _mediator = mediator;
         }
 
 
@@ -26,7 +26,7 @@ namespace Post.Cmd.Api.Controllers
             try
             {
                 command.Id = id;
-                await _commandDispatcher.SendAsync(command);
+                await _mediator.Send(command);
 
                 return Ok(new BaseResponse
                 {
