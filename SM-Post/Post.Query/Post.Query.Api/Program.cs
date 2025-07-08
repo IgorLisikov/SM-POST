@@ -12,7 +12,11 @@ using EventHandler = Post.Query.Infrastructure.Handlers.EventHandler;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-Action<DbContextOptionsBuilder> configureDbContext = o => o.UseLazyLoadingProxies().UseSqlServer(builder.Configuration.GetConnectionString("SqlServer"));
+Action<DbContextOptionsBuilder> configureDbContext = o => o
+    .UseLazyLoadingProxies()
+    .UseSqlServer(builder.Configuration.GetConnectionString("SqlServer"))
+    .LogTo(Console.WriteLine, new[] { DbLoggerCategory.Database.Command.Name })
+    .EnableSensitiveDataLogging();
 builder.Services.AddDbContext<DatabaseContext>(configureDbContext);
 
 // Create database and tables from code:
