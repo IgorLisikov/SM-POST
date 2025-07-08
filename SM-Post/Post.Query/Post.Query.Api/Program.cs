@@ -1,13 +1,8 @@
 using Confluent.Kafka;
-using CQRS.Core.Consumers;
-using CQRS.Core.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Post.Query.Api.Queries;
-using Post.Query.Domain.Entities;
 using Post.Query.Domain.Repositories;
 using Post.Query.Infrastructure.Consumers;
 using Post.Query.Infrastructure.DataAccess;
-using Post.Query.Infrastructure.Dispatchers;
 using Post.Query.Infrastructure.Handlers;
 using Post.Query.Infrastructure.Repositories;
 using System.Reflection;
@@ -19,7 +14,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 Action<DbContextOptionsBuilder> configureDbContext = o => o.UseLazyLoadingProxies().UseSqlServer(builder.Configuration.GetConnectionString("SqlServer"));
 builder.Services.AddDbContext<DatabaseContext>(configureDbContext);
-builder.Services.AddSingleton<DatabaseContextFactory>(new DatabaseContextFactory(configureDbContext));
 
 // Create database and tables from code:
 var dataContext = builder.Services.BuildServiceProvider().GetRequiredService<DatabaseContext>();
@@ -31,7 +25,6 @@ builder.Services.AddScoped<IPostRepository, PostRepository>();
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<IEventHandler, EventHandler>();
 builder.Services.Configure<ConsumerConfig>(builder.Configuration.GetSection(nameof(ConsumerConfig)));
-builder.Services.AddScoped<IEventConsumer, EventConsumer>();
 builder.Services.AddHostedService<ConsumerHostedService>();
 
 

@@ -1,7 +1,12 @@
-﻿using CQRS.Core.Consumers;
+﻿using Confluent.Kafka;
+using CQRS.Core.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Post.Query.Infrastructure.Converters;
+using Post.Query.Infrastructure.Handlers;
+using System.Text.Json;
 
 namespace Post.Query.Infrastructure.Consumers
 {
@@ -13,44 +18,79 @@ namespace Post.Query.Infrastructure.Consumers
     {
         private readonly ILogger<ConsumerHostedService> _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly ConsumerConfig _config;
 
-        public ConsumerHostedService(ILogger<ConsumerHostedService> logger, IServiceProvider serviceProvider)
+        private CancellationTokenSource _cts;
+        private Task _backgroundTask;
+
+        public ConsumerHostedService(ILogger<ConsumerHostedService> logger, IServiceProvider serviceProvider, IOptions<ConsumerConfig> config)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _config = config.Value;
         }
 
-        // The reason the eventConsumer is created using IServiceProvider within the StartAsync method and not injected via the constructor
-        // is due to the scoped lifetime of the IEventConsumer service, while the ConsumerHostedService is a singleton (because it implements IHostedService).
+        // The reason the scope is created on each iteartion - is due to the scoped lifetime of the IEventHandler and repositories,
+        // while the ConsumerHostedService is a singleton (because it implements IHostedService).
         // IHostedService objects are typically registered as singletons by the hosting infrastructure.
 
-        // Mismatch Between Service Lifetimes: If you try to inject a scoped service (like IEventConsumer)
+        // Mismatch Between Service Lifetimes: If you try to inject a scoped service (like IEventHandler)
         // into a singleton service (like ConsumerHostedService) through the constructor, it will lead to an error.
 
-        // By using IServiceProvider.CreateScope() in the StartAsync method, the ConsumerHostedService explicitly creates a new scope.
-        // This allows it to resolve scoped services (like IEventConsumer) within that scope. Once the scope is disposed,
+        // By using IServiceProvider.CreateScope() in the loop, the ConsumerHostedService explicitly creates a new scope
+        // on each iteartion. This allows it to resolve scoped services (like IEventHandler) within that scope. Once the scope is disposed,
         // the scoped services are also disposed, which helps maintain proper lifecycle management.
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Event consumer service running.");
-
-            using (IServiceScope scope = _serviceProvider.CreateScope())
-            {
-                var eventConsumer = scope.ServiceProvider.GetRequiredService<IEventConsumer>();
-                string topic = Environment.GetEnvironmentVariable("KAFKA_TOPIC");
-                Task.Run(() => eventConsumer.Consume(topic), cancellationToken);  // By using Task.Run(), the work is offloaded to a separate thread,
-            }                                                                     // without blocking the main execution thread.
-                                                                                  // This allows StartAsync() to return quickly.
-                                                                                  // If Consume() was 'async', instead of Task.Run() it would be needed to just 'await' it.
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _backgroundTask = Task.Run(() => RunConsumerLoop(_cts.Token), _cts.Token);
             return Task.CompletedTask;
+
+            // By using Task.Run(), the work is offloaded to a separate thread,
+            // without blocking the main execution thread.
+            // This allows StartAsync() to return quickly.
+            // If Consume() was 'async', instead of Task.Run() it would be needed to just 'await' it.
+        }
+
+        private void RunConsumerLoop(CancellationToken token)
+        {
+            var topic = Environment.GetEnvironmentVariable("KAFKA_TOPIC");
+
+            using var consumer = new ConsumerBuilder<string, string>(_config)  // Don’t register Kafka consumers in DI as singleton or scoped.
+                .SetKeyDeserializer(Deserializers.Utf8)                        // Create them manually where needed, and dispose them properly.
+                .SetValueDeserializer(Deserializers.Utf8)
+                .Build();
+
+            consumer.Subscribe(topic);
+
+            while (!token.IsCancellationRequested)
+            {
+                var consumeResult = consumer.Consume(token);    // Consume() blocks until consumeResult is returned
+                if (consumeResult?.Message == null) continue;
+
+                var options = new JsonSerializerOptions { Converters = { new EventJsonConverter() } };
+                var @event = JsonSerializer.Deserialize<BaseEvent>(consumeResult.Message.Value, options);
+
+                using (var scope = _serviceProvider.CreateScope())   // create scope on each iteration => eventHandler (Scoped) will be created; Repositories will be created
+                {
+                    var eventHandler = scope.ServiceProvider.GetRequiredService<IEventHandler>();
+                    var handlerMethod = eventHandler.GetType().GetMethod("On", new[] { @event.GetType() });
+
+                    if (handlerMethod == null)
+                        throw new InvalidOperationException($"No handler found for event type {@event.GetType().Name}");
+
+                    handlerMethod.Invoke(eventHandler, new object[] { @event });
+                }
+
+                consumer.Commit(consumeResult);
+            }
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Event consumer service stopped.");
-
-            return Task.CompletedTask;
+            _cts?.Cancel();
+            return _backgroundTask ?? Task.CompletedTask;
         }
     }
 }
