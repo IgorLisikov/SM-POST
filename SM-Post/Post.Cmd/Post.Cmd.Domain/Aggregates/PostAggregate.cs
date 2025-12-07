@@ -5,7 +5,7 @@ namespace Post.Cmd.Domain.Aggregates;
 
 public class PostAggregate : AggregateRoot
 {
-    // state of aggragete: in current project it serves only for validation before any update;
+    // state of aggregate: in current project it serves only for validation before any update;
     // for example there is no Message (text of Post) property, because no need to validate Message
     // but events can store Message text.
     private bool _active;
