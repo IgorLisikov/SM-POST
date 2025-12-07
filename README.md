@@ -8,7 +8,7 @@ The ocelot-gateway project is an Api-gateway for both projects
 Workflow (assume some data already exists)
 --
 Edit message for a post via command-api project:
-1. Request reaches EditMessageController  
+1. Request reaches EditMessageController of command-api project  
 2. Events are pulled from event store - MongoDB  
 3. Events are replayed to build aggregate  
 4. "Edit message" validation occurs on aggregate  
