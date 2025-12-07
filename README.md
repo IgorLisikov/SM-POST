@@ -3,7 +3,7 @@ About this app
 Domain - social media Posts and Comments  
 The command-api project can be used to add and update Post and their Comments  
 The query-api project can be used to query for Post and their Comments  
-The ocelot-gateway project is a Api-gateway for both projects  
+The ocelot-gateway project is an Api-gateway for both projects  
 
 Workflow (assume some data already exists)
 --
