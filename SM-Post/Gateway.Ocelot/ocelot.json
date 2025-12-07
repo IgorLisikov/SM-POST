@@ -1,0 +1,19 @@
+{
+  "Routes": [
+    {
+      "DownstreamPathTemplate": "/api/v1/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "command-api", "Port": 80 }],
+      "UpstreamPathTemplate": "/commands/{everything}",
+      "UpstreamHttpMethod": [ "POST", "PUT", "DELETE" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "query-api", "Port": 80 }],
+      "UpstreamPathTemplate": "/queries/{everything}",
+      "UpstreamHttpMethod": [ "GET" ]
+    }
+  ],
+  "GlobalConfiguration": { "RequestIdKey": "OcRequestId" }
+}
