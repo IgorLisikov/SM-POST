@@ -8,15 +8,16 @@ The ocelot-gateway project is a Api-gateway for both projects
 Workflow (assume some data already exists)
 --
 Edit message for a post via command-api project:
-1. Events are pulled from event store - MongoDB  
-2. Events are replayed to build aggregate  
-3. "Edit message" validation occurs on aggregate  
-4. "MessageUpdatedEvent" is raised  
-5. The event is stored in MongoDB  
-6. The event is produced to kafka topic  
-7. query-api project has hosted service running that consumes the same kafka topic  
-8. The event is consumed by query-api project -> event handler is called  
-9. Event handler calls repository to make updates to MS SQL database tables
+1. Request reaches EditMessageController  
+2. Events are pulled from event store - MongoDB  
+3. Events are replayed to build aggregate  
+4. "Edit message" validation occurs on aggregate  
+5. "MessageUpdatedEvent" is raised  
+6. The event is stored in MongoDB  
+7. The event is produced to Kafka topic  
+8. query-api project has hosted service running that consumes the same Kafka topic  
+9. The event is consumed by query-api project -> event handler is called  
+10. Event handler calls repository to make updates to MS SQL database tables
 
 Run this app in docker
 ---
