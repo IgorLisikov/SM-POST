@@ -53,7 +53,7 @@ namespace Post.Query.Infrastructure.Consumers
             // If Consume() was 'async', instead of Task.Run() it would be needed to just 'await' it.
         }
 
-        private void RunConsumerLoop(CancellationToken token)
+        private async Task RunConsumerLoop(CancellationToken token)
         {
             var topic = Environment.GetEnvironmentVariable("KAFKA_TOPIC");
 
@@ -80,17 +80,30 @@ namespace Post.Query.Infrastructure.Consumers
                     if (handlerMethod == null)
                         throw new InvalidOperationException($"No handler found for event type {@event.GetType().Name}");
 
-                    handlerMethod.Invoke(eventHandler, new object[] { @event });
+                    var task = (Task)handlerMethod.Invoke(eventHandler, new object[] { @event });
+                    await task;
                 }
 
                 consumer.Commit(consumeResult);
             }
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            _cts?.Cancel();
-            return _backgroundTask ?? Task.CompletedTask;
+            _logger.LogInformation("Stopping Kafka consumer service...");
+            _cts.Cancel();
+
+            if (_backgroundTask != null)
+            {
+                try
+                {
+                    await _backgroundTask; // wait for loop to finish
+                }
+                catch (OperationCanceledException)
+                {
+                    // expected when shutting down
+                }
+            }
         }
     }
 }
