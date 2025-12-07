@@ -33,10 +33,10 @@ docker-compose up --build -d
   - sm-post_command-api  
   - sm-post_query-api  
   - sm-post_ocelot-gateway  
-  - kafka:3.5  
-  - zookeeper:3.9  
+  - confluentinc/cp-kafka:7.5.0  
+  - confluentinc/cp-zookeeper:7.5.0  
   - mongo:latest  
-  - sql-server:2017-latest-ubuntu
+  - mssql/server:2019-latest  
 
 - In Docker  
   Containers will be created:  
