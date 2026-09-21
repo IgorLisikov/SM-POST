@@ -11,7 +11,9 @@ COPY CQRS.Core/CQRS.Core.csproj CQRS.Core/
 RUN dotnet restore Post.Query/Post.Query.Api/Post.Query.Api.csproj
 
 # Copy the rest of the source code
-COPY . .
+COPY Post.Query/ Post.Query/
+COPY Post.Common/ Post.Common/
+COPY CQRS.Core/ CQRS.Core/
 
 # Publish Post.Query.Api
 WORKDIR /src/Post.Query/Post.Query.Api
