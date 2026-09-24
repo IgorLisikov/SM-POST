@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Post.Query.Infrastructure.Converters;
+using Post.Common.Converters;
 using Post.Query.Infrastructure.Handlers;
 using System.Text.Json;
 

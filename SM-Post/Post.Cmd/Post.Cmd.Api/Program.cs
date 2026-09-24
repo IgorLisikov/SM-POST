@@ -3,12 +3,14 @@ using CQRS.Core.Domain;
 using CQRS.Core.Events;
 using CQRS.Core.Handlers;
 using CQRS.Core.Infrastructure;
+using CQRS.Core.Outbox;
 using CQRS.Core.Producers;
 using MediatR;
 using MongoDB.Bson.Serialization;
 using Post.Cmd.Domain.Aggregates;
 using Post.Cmd.Infrastructure.Config;
 using Post.Cmd.Infrastructure.Hanlders;
+using Post.Cmd.Infrastructure.Outbox;
 using Post.Cmd.Infrastructure.Producers;
 using Post.Cmd.Infrastructure.Repositories;
 using Post.Cmd.Infrastructure.Stores;
@@ -33,9 +35,11 @@ BsonClassMap.RegisterClassMap<PostRemovedEvent>();
 builder.Services.Configure<MongoDbConfig>(builder.Configuration.GetSection(nameof(MongoDbConfig)));
 builder.Services.Configure<ProducerConfig>(builder.Configuration.GetSection(nameof(ProducerConfig)));
 builder.Services.AddScoped<IEventStoreRepository, EventStoreRepository>();
+builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
 builder.Services.AddScoped<IEventProducer, EventProducer>();
 builder.Services.AddScoped<IEventStore, EventStore>();
 builder.Services.AddScoped<IEventSourcingHandler<PostAggregate>, EventSourcingHandler>();
+builder.Services.AddHostedService<OutboxPublisherHostedService>();
 
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 

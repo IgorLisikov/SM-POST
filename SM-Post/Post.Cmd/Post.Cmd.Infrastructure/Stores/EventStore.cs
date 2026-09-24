@@ -2,22 +2,21 @@ using CQRS.Core.Domain;
 using CQRS.Core.Events;
 using CQRS.Core.Exceptions;
 using CQRS.Core.Infrastructure;
-using CQRS.Core.Producers;
+using CQRS.Core.Outbox;
 using Post.Cmd.Domain.Aggregates;
+using System.Text.Json;
 
 namespace Post.Cmd.Infrastructure.Stores;
 
-// Gets events from MongoDB via eventStoreRepository
-// Saves events to MongoDB via eventStoreRepository and to Kafka queue
 public class EventStore : IEventStore
 {
     private readonly IEventStoreRepository _eventStoreRepository;
-    private readonly IEventProducer _eventProducer;
+    private readonly IOutboxRepository _outboxRepository;
 
-    public EventStore(IEventStoreRepository eventStoreRepository, IEventProducer eventProducer)
+    public EventStore(IEventStoreRepository eventStoreRepository, IOutboxRepository outboxRepository)
     {
         _eventStoreRepository = eventStoreRepository;
-        _eventProducer = eventProducer;
+        _outboxRepository = outboxRepository;
     }
 
     public async Task<List<BaseEvent>> GetEventsAsync(Guid aggregateId)
@@ -58,12 +57,20 @@ public class EventStore : IEventStore
                 EventData = @event
             };
 
-            // code below must be in transaction:
+            // Transactional outbox: persist eventModel and outbox message to the same DB.
             await _eventStoreRepository.SaveAsync(eventModel);
 
-            string topic = Environment.GetEnvironmentVariable("KAFKA_TOPIC");
-            await _eventProducer.ProduceAsync(topic, @event);
-            // end of transaction
+            var outboxMessage = new OutboxMessage
+            {
+                AggregateIdentifier = aggregateId.ToString(),
+                EventType = eventType,
+                PayloadJson = JsonSerializer.Serialize(@event, @event.GetType()),
+                OccurredOn = DateTime.UtcNow
+            };
+
+            await _outboxRepository.SaveAsync(outboxMessage);
+
+            // Do not call Kafka here. A separate Outbox publisher will read and publish these messages.
         }
     }
 }

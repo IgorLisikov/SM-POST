@@ -3,7 +3,7 @@ using Post.Common.Events;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Post.Query.Infrastructure.Converters
+namespace Post.Common.Converters
 {
     // When working with a base class like BaseEvent and multiple derived classes(e.g., EventA, EventB),
     // standard JSON serializers struggle to correctly deserialize JSON into the appropriate derived class.
