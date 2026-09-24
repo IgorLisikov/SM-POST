@@ -25,7 +25,7 @@ public class EventProducer : IEventProducer
 
         var eventMessage = new Message<string, string>
         {
-            Key = Guid.NewGuid().ToString(),
+            Key = @event.Id.ToString(),
             Value = JsonSerializer.Serialize(@event, @event.GetType())
         };
 
