@@ -7,10 +7,10 @@ namespace Post.Cmd.Infrastructure.Repositories
 {
     public class OutboxRepository : IOutboxRepository
     {
-        private readonly MongoClient _mongoClient;
+        private readonly IMongoClient _mongoClient;
         private readonly IMongoCollection<OutboxMessage> _outboxCollection;
 
-        public OutboxRepository(IOptions<MongoDbConfig> config, MongoClient mongoClient)
+        public OutboxRepository(IOptions<MongoDbConfig> config, IMongoClient mongoClient)
         {
             _mongoClient = mongoClient;
             var mongoDatabase = _mongoClient.GetDatabase(config.Value.Database);

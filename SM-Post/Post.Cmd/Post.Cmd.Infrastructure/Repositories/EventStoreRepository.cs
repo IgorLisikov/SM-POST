@@ -12,10 +12,10 @@ public class EventStoreRepository : IEventStoreRepository
     // Collection - a grouping of documents, similar to a table in relational database.
     // Document - a record stored in BSON format, representing real-world data.
 
-    private readonly MongoClient _mongoClient;
+    private readonly IMongoClient _mongoClient;
     private readonly IMongoCollection<EventModel> _eventStoreCollection;
 
-    public EventStoreRepository(IOptions<MongoDbConfig> config, MongoClient mongoClient)
+    public EventStoreRepository(IOptions<MongoDbConfig> config, IMongoClient mongoClient)
     {
         _mongoClient = mongoClient;
         var mongoDatabase = _mongoClient.GetDatabase(config.Value.Database);        // get object to access database, param - DB name

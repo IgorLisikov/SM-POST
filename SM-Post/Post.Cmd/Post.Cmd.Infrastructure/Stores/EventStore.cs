@@ -13,9 +13,9 @@ public class EventStore : IEventStore
 {
     private readonly IEventStoreRepository _eventStoreRepository;
     private readonly IOutboxRepository _outboxRepository;
-    private readonly MongoClient _mongoClient;
+    private readonly IMongoClient _mongoClient;
 
-    public EventStore(IEventStoreRepository eventStoreRepository, IOutboxRepository outboxRepository, MongoClient mongoClient)
+    public EventStore(IEventStoreRepository eventStoreRepository, IOutboxRepository outboxRepository, IMongoClient mongoClient)
     {
         _eventStoreRepository = eventStoreRepository;
         _outboxRepository = outboxRepository;
