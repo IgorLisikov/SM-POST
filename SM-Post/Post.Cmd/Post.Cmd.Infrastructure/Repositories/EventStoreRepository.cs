@@ -24,14 +24,14 @@ public class EventStoreRepository : IEventStoreRepository
 
     public async Task<List<EventModel>> FindByAggregateId(Guid aggregateId)
     {
-        return await _eventStoreCollection.Find(x => x.AggregateIdentifier == aggregateId).ToListAsync().ConfigureAwait(false);
+        return await _eventStoreCollection.Find(x => x.AggregateIdentifier == aggregateId).ToListAsync();
     }
 
     public async Task SaveAsync(EventModel @event, IClientSessionHandle session = null)
     {
         if (session == null)
-            await _eventStoreCollection.InsertOneAsync(@event).ConfigureAwait(false);
+            await _eventStoreCollection.InsertOneAsync(@event);
         else
-            await _eventStoreCollection.InsertOneAsync(session, @event).ConfigureAwait(false);
+            await _eventStoreCollection.InsertOneAsync(session, @event);
     }
 }

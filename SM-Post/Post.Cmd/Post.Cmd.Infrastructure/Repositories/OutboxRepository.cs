@@ -42,7 +42,7 @@ namespace Post.Cmd.Infrastructure.Repositories
                 .Set(x => x.Published, true)
                 .Set(x => x.PublishedAt, publishedAt);
 
-            await _outboxCollection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+            await _outboxCollection.UpdateOneAsync(filter, update);
         }
     }
 }

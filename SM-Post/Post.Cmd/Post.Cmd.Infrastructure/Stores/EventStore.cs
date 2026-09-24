@@ -73,9 +73,9 @@ public class EventStore : IEventStore
             session.StartTransaction();
             try
             {
-                await _eventStoreRepository.SaveAsync(eventModel, session).ConfigureAwait(false);
+                await _eventStoreRepository.SaveAsync(eventModel, session);
                 // Do not call Kafka here. A separate Outbox publisher will read and publish these messages.
-                await _outboxRepository.SaveAsync(outboxMessage, session).ConfigureAwait(false);
+                await _outboxRepository.SaveAsync(outboxMessage, session);
                 await session.CommitTransactionAsync();
             }
             catch (Exception)
