@@ -12,24 +12,26 @@ public class EventStoreRepository : IEventStoreRepository
     // Collection - a grouping of documents, similar to a table in relational database.
     // Document - a record stored in BSON format, representing real-world data.
 
+    private readonly MongoClient _mongoClient;
     private readonly IMongoCollection<EventModel> _eventStoreCollection;
 
-    public EventStoreRepository(IOptions<MongoDbConfig> config)
+    public EventStoreRepository(IOptions<MongoDbConfig> config, MongoClient mongoClient)
     {
-        var mongoClient = new MongoClient(config.Value.ConnectionString);          // create client with connectionString
-        var mongoDatabase = mongoClient.GetDatabase(config.Value.Database);        // get object to access database, param - DB name
-
+        _mongoClient = mongoClient;
+        var mongoDatabase = _mongoClient.GetDatabase(config.Value.Database);        // get object to access database, param - DB name
         _eventStoreCollection = mongoDatabase.GetCollection<EventModel>(config.Value.Collection);  // get object to access collection; param - collection name
     }
-
 
     public async Task<List<EventModel>> FindByAggregateId(Guid aggregateId)
     {
         return await _eventStoreCollection.Find(x => x.AggregateIdentifier == aggregateId).ToListAsync().ConfigureAwait(false);
     }
 
-    public async Task SaveAsync(EventModel @event)
+    public async Task SaveAsync(EventModel @event, IClientSessionHandle session = null)
     {
-        await _eventStoreCollection.InsertOneAsync(@event).ConfigureAwait(false);
+        if (session == null)
+            await _eventStoreCollection.InsertOneAsync(@event).ConfigureAwait(false);
+        else
+            await _eventStoreCollection.InsertOneAsync(session, @event).ConfigureAwait(false);
     }
 }

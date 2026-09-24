@@ -3,6 +3,7 @@ using CQRS.Core.Events;
 using CQRS.Core.Exceptions;
 using CQRS.Core.Infrastructure;
 using CQRS.Core.Outbox;
+using MongoDB.Driver;
 using Post.Cmd.Domain.Aggregates;
 using System.Text.Json;
 
@@ -12,11 +13,13 @@ public class EventStore : IEventStore
 {
     private readonly IEventStoreRepository _eventStoreRepository;
     private readonly IOutboxRepository _outboxRepository;
+    private readonly MongoClient _mongoClient;
 
-    public EventStore(IEventStoreRepository eventStoreRepository, IOutboxRepository outboxRepository)
+    public EventStore(IEventStoreRepository eventStoreRepository, IOutboxRepository outboxRepository, MongoClient mongoClient)
     {
         _eventStoreRepository = eventStoreRepository;
         _outboxRepository = outboxRepository;
+        _mongoClient = mongoClient;
     }
 
     public async Task<List<BaseEvent>> GetEventsAsync(Guid aggregateId)
@@ -57,9 +60,6 @@ public class EventStore : IEventStore
                 EventData = @event
             };
 
-            // Transactional outbox: persist eventModel and outbox message to the same DB.
-            await _eventStoreRepository.SaveAsync(eventModel);
-
             var outboxMessage = new OutboxMessage
             {
                 AggregateIdentifier = aggregateId.ToString(),
@@ -68,9 +68,21 @@ public class EventStore : IEventStore
                 OccurredOn = DateTime.UtcNow
             };
 
-            await _outboxRepository.SaveAsync(outboxMessage);
-
-            // Do not call Kafka here. A separate Outbox publisher will read and publish these messages.
+            // Transactional outbox: persist eventModel and outbox message to the same DB within the session.
+            using var session = await _mongoClient.StartSessionAsync();
+            session.StartTransaction();
+            try
+            {
+                await _eventStoreRepository.SaveAsync(eventModel, session).ConfigureAwait(false);
+                // Do not call Kafka here. A separate Outbox publisher will read and publish these messages.
+                await _outboxRepository.SaveAsync(outboxMessage, session).ConfigureAwait(false);
+                await session.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await session.AbortTransactionAsync();
+                throw;
+            }
         }
     }
 }

@@ -6,7 +6,9 @@ using CQRS.Core.Infrastructure;
 using CQRS.Core.Outbox;
 using CQRS.Core.Producers;
 using MediatR;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
 using Post.Cmd.Domain.Aggregates;
 using Post.Cmd.Infrastructure.Config;
 using Post.Cmd.Infrastructure.Hanlders;
@@ -39,6 +41,12 @@ builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
 builder.Services.AddScoped<IEventProducer, EventProducer>();
 builder.Services.AddScoped<IEventStore, EventStore>();
 builder.Services.AddScoped<IEventSourcingHandler<PostAggregate>, EventSourcingHandler>();
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    var config = sp.GetRequiredService<IOptions<MongoDbConfig>>();
+    return new MongoClient(config.Value.ConnectionString);
+});
+
 builder.Services.AddHostedService<OutboxPublisherHostedService>();
 
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());

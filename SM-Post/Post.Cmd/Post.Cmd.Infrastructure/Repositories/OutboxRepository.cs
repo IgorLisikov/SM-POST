@@ -7,20 +7,22 @@ namespace Post.Cmd.Infrastructure.Repositories
 {
     public class OutboxRepository : IOutboxRepository
     {
+        private readonly MongoClient _mongoClient;
         private readonly IMongoCollection<OutboxMessage> _outboxCollection;
 
-        public OutboxRepository(IOptions<MongoDbConfig> config)
+        public OutboxRepository(IOptions<MongoDbConfig> config, MongoClient mongoClient)
         {
-            var mongoClient = new MongoClient(config.Value.ConnectionString);
-            var mongoDatabase = mongoClient.GetDatabase(config.Value.Database);
-
+            _mongoClient = mongoClient;
+            var mongoDatabase = _mongoClient.GetDatabase(config.Value.Database);
             _outboxCollection = mongoDatabase.GetCollection<OutboxMessage>(config.Value.OutboxCollection);
         }
 
-        public async Task SaveAsync(OutboxMessage message)
+        public async Task SaveAsync(OutboxMessage message, IClientSessionHandle session = null)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
-            await _outboxCollection.InsertOneAsync(message);
+            if (session == null)
+                await _outboxCollection.InsertOneAsync(message);
+            else
+                await _outboxCollection.InsertOneAsync(session, message);
         }
 
         public async Task<List<OutboxMessage>> GetUnpublishedAsync(int limit = 100)
