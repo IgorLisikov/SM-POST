@@ -6,6 +6,8 @@ services:
     restart: unless-stopped
     ports:
       - "2181:2181"
+    volumes:
+      - "zookeeper_data:/bitnami"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -17,6 +19,8 @@ services:
     ports:
       - "9092:9092"
     restart: unless-stopped
+    volumes:
+      - "kafka_data:/bitnami"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -35,6 +39,8 @@ services:
     ports:
       - "27017:27017"
     restart: unless-stopped
+    volumes:
+      - "mongodb_data_container:/data/db"
     networks:
       - smPostNetwork
     
@@ -47,6 +53,8 @@ services:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "StrongP@ssw0rd!"
       MSSQL_PID: "Express"
+    volumes:
+      - "sqlserver_data:/var/opt/mssql"
     networks:
       - smPostNetwork
     
@@ -94,7 +102,17 @@ services:
       - query-api
     networks:
       - smPostNetwork
-      
+
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local
+  mongodb_data_container:
+    driver: local
+  sqlserver_data:
+    driver: local
+    
 networks:
   smPostNetwork:
     driver: bridge
