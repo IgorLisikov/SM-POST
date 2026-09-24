@@ -42,7 +42,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2019-latest
     restart: unless-stopped
     ports:
-      - "1405:1433"
+      - "1401:1433"
     environment:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "StrongP@ssw0rd!"
