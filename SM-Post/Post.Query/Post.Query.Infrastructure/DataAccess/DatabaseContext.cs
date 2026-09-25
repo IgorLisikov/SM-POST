@@ -12,4 +12,10 @@ public class DatabaseContext : DbContext
 
     public DbSet<PostEntity> Posts { get; set; }
     public DbSet<CommentEntity> Comments { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfiguration(new PostConfiguration());
+        modelBuilder.ApplyConfiguration(new CommentConfiguration());
+    }
 }
