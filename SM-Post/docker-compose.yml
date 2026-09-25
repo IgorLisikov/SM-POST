@@ -76,6 +76,12 @@ services:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "StrongP@ssw0rd!"
       MSSQL_PID: "Express"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/1433'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
     volumes:
       - "sqlserver_data:/var/opt/mssql"
     networks:
@@ -91,9 +97,12 @@ services:
       - "5010:80"
     restart: unless-stopped
     depends_on:
-      - kafka
-      - mongo
-      - sql-server
+      kafka:
+        condition: service_started
+      mongo:
+        condition: service_started
+      sql-server:
+        condition: service_healthy
     networks:
       - smPostNetwork
 
@@ -107,9 +116,12 @@ services:
       - "5011:80"
     restart: unless-stopped
     depends_on:
-      - kafka
-      - mongo
-      - sql-server
+      kafka:
+        condition: service_started
+      mongo:
+        condition: service_started
+      sql-server:
+        condition: service_healthy
     networks:
       - smPostNetwork
 
