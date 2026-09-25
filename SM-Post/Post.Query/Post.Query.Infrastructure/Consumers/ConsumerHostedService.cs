@@ -2,8 +2,12 @@
 using CQRS.Core.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Post.Common.Converters;
+using Post.Query.Domain.Entities;
+using Post.Query.Domain.Repositories;
+using Post.Query.Infrastructure.DataAccess;
 using Post.Query.Infrastructure.Handlers;
 using System.Text.Json;
 
@@ -47,11 +51,40 @@ namespace Post.Query.Infrastructure.Consumers
                     if (handlerMethod == null)
                         throw new InvalidOperationException($"No handler found for event type {@event.GetType().Name}");
 
-                    var task = (Task)handlerMethod.Invoke(eventHandler, new object[] { @event });
-                    await task;
-                }
+                    var processedEventsRepo = scope.ServiceProvider.GetRequiredService<IProcessedEventRepository>();
+                    bool isAlreadyProcessed = await processedEventsRepo.Exists(@event.Id, @event.Version);
+                    if (isAlreadyProcessed)
+                    {
+                        // commit offset and continue — this event already applied
+                        consumer.Commit(consumeResult);
+                        continue;
+                    }
 
-                consumer.Commit(consumeResult);
+                    var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+                    using var transaction = await dbContext.Database.BeginTransactionAsync(token);
+                    try
+                    {
+                        var task = (Task)handlerMethod.Invoke(eventHandler, new object[] { @event });
+                        await task;
+
+                        await processedEventsRepo.CreateAsync(new ProcessedEvent
+                        {
+                            AggregateId = @event.Id,
+                            Version = @event.Version
+                        });
+
+                        await transaction.CommitAsync(token);
+
+                        // Only commit Kafka offset after successful DB commit
+                        consumer.Commit(consumeResult);
+                    }
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync(token);
+                        var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConsumerHostedService>>();
+                        logger.LogError(ex, "Failed to process event {EventType} for aggregate {AggregateId} v{Version}", @event.GetType().Name, @event.Id, @event.Version);
+                    }
+                }
             }
         }
     }
