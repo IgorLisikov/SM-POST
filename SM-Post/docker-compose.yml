@@ -42,10 +42,30 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data_container:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro  # run .js file to initialize replica set on container start
     restart: unless-stopped
     networks:
       - smPostNetwork
+      
+  mongo-init:     # Initialize Replica Set for MongoDB (to be able to use transactions)
+    image: mongo:7
+    depends_on:
+      - mongo
+    networks:
+      - smPostNetwork
+    command: >
+      bash -c "
+        sleep 5 &&
+        mongosh --host mongo:27017 --eval '
+          try {
+            rs.status();
+          } catch (e) {
+            rs.initiate({
+              _id: \"rs0\",
+              members: [{ _id: 0, host: \"mongo:27017\" }]
+            });
+          }
+        '
+      "
     
   sql-server:
     image: mcr.microsoft.com/mssql/server:2019-latest
