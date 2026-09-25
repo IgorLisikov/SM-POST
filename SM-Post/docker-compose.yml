@@ -36,7 +36,6 @@ services:
       
   mongo:
     image: mongo:7
-    container_name: mongo-rs
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]    # add replica set to be able to use transactions
     ports:
       - "27017:27017"
