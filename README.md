@@ -13,11 +13,10 @@ Edit message for a post via command-api project:
 3. Events are replayed to build aggregate  
 4. "Edit message" validation occurs on aggregate  
 5. "MessageUpdatedEvent" is raised  
-6. The event is stored in MongoDB  
-7. The event is produced to Kafka topic  
-8. query-api project has hosted service running that consumes the same Kafka topic  
-9. The event is consumed by query-api project -> event handler is called  
-10. Event handler calls repository to make updates to MS SQL database tables
+6. The event record and outbox record are saved to MongoDB within transaction (Transactional Outbox) 
+7. Background service (Outbox publisher) polls MongoDB for new outbox records every 5 seconds and publishes event to Kafka topic (at-least-once delivery)
+8. Background service (Kafka consumer) running in query-api project consumes the same Kafka topic  
+9. Event record is consumed by query-api project -> the changes are applied to corresponding MS SQL tables and ProcessedEvent table within transaction (Idempotent Consumer)
 
 Run this app in docker
 ---
@@ -25,7 +24,7 @@ Run this app in docker
 cd SM-POST  
 ```
 ```powershell
-docker-compose up --build -d
+docker-compose up -d
 ```
 
 - In Docker  
@@ -35,18 +34,18 @@ docker-compose up --build -d
   - sm-post_ocelot-gateway  
   - confluentinc/cp-kafka:7.5.0  
   - confluentinc/cp-zookeeper:7.5.0  
-  - mongo:latest  
+  - mongo:7  
   - mssql/server:2019-latest  
 
 - In Docker  
-  Containers will be created:  
+  Container group will be created:  
   - sm-post
 
 Connections
 ---
 MongoDB → localhost:27017
 
-SQL Server → localhost, 1405  
+SQL Server → localhost, 1401  
    login: sa  
    password: StrongP@ssw0rd!
 
@@ -54,7 +53,7 @@ Kafka → localhost:9092
 
 Test it
 ---
-(SQL server takes 2-3 minutes to become available; wait, then stop and restart sm-post_query-api manually)
+(SQL server takes 2-3 minutes to become available; other containers wait for it)
 
 1. Direct access (bypassing Ocelot, for testing):
 
