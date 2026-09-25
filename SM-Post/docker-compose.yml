@@ -35,12 +35,15 @@ services:
       - smPostNetwork
       
   mongo:
-    image: mongo:latest
+    image: mongo:7
+    container_name: mongo-rs
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]    # add replica set to be able to use transactions
     ports:
       - "27017:27017"
-    restart: unless-stopped
     volumes:
-      - "mongodb_data_container:/data/db"
+      - mongodb_data_container:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro  # run .js file to initialize replica set on container start
+    restart: unless-stopped
     networks:
       - smPostNetwork
     
