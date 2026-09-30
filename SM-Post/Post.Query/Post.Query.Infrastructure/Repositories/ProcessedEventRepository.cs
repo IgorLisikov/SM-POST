@@ -15,16 +15,16 @@ namespace Post.Query.Infrastructure.Repositories
         }
 
 
-        public async Task CreateAsync(ProcessedEvent processedEvent)
+        public async Task CreateAsync(ProcessedEvent processedEvent, CancellationToken token = default)
         {
             _context.ProcessedEvents.Add(processedEvent);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(token);
         }
 
-        public async Task<bool> Exists(Guid aggregateId, int version)
+        public async Task<bool> Exists(Guid aggregateId, int version, CancellationToken token = default)
         {
             return await _context.ProcessedEvents
-                .AnyAsync(x => x.AggregateId == aggregateId && x.Version == version);
+                .AnyAsync(x => x.AggregateId == aggregateId && x.Version == version, token);
         }
     }
 }

@@ -17,7 +17,7 @@ namespace Post.Cmd.Infrastructure.Repositories
             _outboxCollection = mongoDatabase.GetCollection<OutboxMessage>("outbox");
         }
 
-        public async Task SaveAsync(OutboxMessage message, IClientSessionHandle session = null)
+        public async Task SaveAsync(OutboxMessage message, IClientSessionHandle session = null, CancellationToken token = default)
         {
             if (session == null)
                 await _outboxCollection.InsertOneAsync(message);
@@ -25,7 +25,7 @@ namespace Post.Cmd.Infrastructure.Repositories
                 await _outboxCollection.InsertOneAsync(session, message);
         }
 
-        public async Task<List<OutboxMessage>> GetUnpublishedAsync(int limit = 100)
+        public async Task<List<OutboxMessage>> GetUnpublishedAsync(int limit = 100, CancellationToken token = default)
         {
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Published, false);
             var find = _outboxCollection.Find(filter)
@@ -35,7 +35,7 @@ namespace Post.Cmd.Infrastructure.Repositories
             return await find.ToListAsync();
         }
 
-        public async Task MarkAsPublishedAsync(Guid id, DateTime publishedAt)
+        public async Task MarkAsPublishedAsync(Guid id, DateTime publishedAt, CancellationToken token = default)
         {
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Id, id);
             var update = Builders<OutboxMessage>.Update

@@ -36,7 +36,7 @@ namespace Post.Cmd.Infrastructure.Outbox
                     var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
                     var eventProducer = scope.ServiceProvider.GetRequiredService<IEventProducer>();
 
-                    var pending = await outboxRepository.GetUnpublishedAsync(100);
+                    var pending = await outboxRepository.GetUnpublishedAsync(100, token);
                     foreach (var msg in pending)
                     {
                         try
@@ -44,10 +44,10 @@ namespace Post.Cmd.Infrastructure.Outbox
                             var options = new JsonSerializerOptions { Converters = { new EventJsonConverter() } };
                             var @event = JsonSerializer.Deserialize<BaseEvent>(msg.PayloadJson, options);
 
-                            await eventProducer.ProduceAsync(_kafkaTopics.SocialMediaPostEvents, @event);
+                            await eventProducer.ProduceAsync(_kafkaTopics.SocialMediaPostEvents, @event, token);
 
                             // The order of execution makes it at least once delivery.
-                            await outboxRepository.MarkAsPublishedAsync(msg.Id, DateTime.UtcNow);
+                            await outboxRepository.MarkAsPublishedAsync(msg.Id, DateTime.UtcNow, token);
                         }
                         catch (Exception ex)
                         {

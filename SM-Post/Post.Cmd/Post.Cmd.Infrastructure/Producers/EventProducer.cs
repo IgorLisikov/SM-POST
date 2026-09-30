@@ -21,7 +21,7 @@ public class EventProducer : IEventProducer
     }
 
 
-    public async Task ProduceAsync<T>(string topic, T @event) where T : BaseEvent
+    public async Task ProduceAsync<T>(string topic, T @event, CancellationToken token = default) where T : BaseEvent
     {
         using var producer = new ProducerBuilder<string, string>(_producerConfig)
             .SetKeySerializer(Serializers.Utf8)
@@ -34,7 +34,7 @@ public class EventProducer : IEventProducer
             Value = JsonSerializer.Serialize(@event, @event.GetType())
         };
 
-        var deliveryResult = await producer.ProduceAsync(topic, eventMessage);
+        var deliveryResult = await producer.ProduceAsync(topic, eventMessage, token);
 
         if (deliveryResult.Status == PersistenceStatus.NotPersisted)
         {

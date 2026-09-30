@@ -62,7 +62,7 @@ namespace Post.Query.Infrastructure.Consumers
                         throw new InvalidOperationException($"No handler found for event type {@event.GetType().Name}");
 
                     var processedEventsRepo = scope.ServiceProvider.GetRequiredService<IProcessedEventRepository>();
-                    bool isAlreadyProcessed = await processedEventsRepo.Exists(@event.Id, @event.Version);
+                    bool isAlreadyProcessed = await processedEventsRepo.Exists(@event.Id, @event.Version, token);
                     if (isAlreadyProcessed)
                     {
                         // commit offset and continue — this event already applied
@@ -81,7 +81,7 @@ namespace Post.Query.Infrastructure.Consumers
                         {
                             AggregateId = @event.Id,
                             Version = @event.Version
-                        });
+                        }, token);
 
                         await transaction.CommitAsync(token);
 
