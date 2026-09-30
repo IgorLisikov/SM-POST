@@ -8,16 +8,23 @@ using System.Reflection;
 using MediatR;
 using EventHandler = Post.Query.Infrastructure.Handlers.EventHandler;
 using Post.Common.Configs;
+using Post.Query.Infrastructure.Config;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-Action<DbContextOptionsBuilder> configureOptionsBuilder = o => o
-    .UseLazyLoadingProxies()
-    .UseSqlServer(builder.Configuration.GetConnectionString("SqlServer"))
-    .LogTo(Console.WriteLine, new[] { DbLoggerCategory.Database.Command.Name })
-    .EnableSensitiveDataLogging();
-builder.Services.AddDbContext<DatabaseContext>(configureOptionsBuilder);
+
+builder.Services.Configure<SqlServerConfig>(builder.Configuration.GetSection("Sql"));
+builder.Services.AddDbContext<DatabaseContext>((sp, optionsBuilder) =>
+{
+    var sqlConfig = sp.GetRequiredService<IOptions<SqlServerConfig>>().Value;
+    optionsBuilder
+        .UseLazyLoadingProxies()
+        .UseSqlServer(sqlConfig.GetConnectionString())
+        .LogTo(Console.WriteLine, new[] { DbLoggerCategory.Database.Command.Name })
+        .EnableSensitiveDataLogging();
+});
 
 // Create database and tables from code:
 var dataContext = builder.Services.BuildServiceProvider().GetRequiredService<DatabaseContext>();
