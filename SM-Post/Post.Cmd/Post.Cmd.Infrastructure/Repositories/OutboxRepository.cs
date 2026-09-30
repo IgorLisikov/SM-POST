@@ -14,7 +14,7 @@ namespace Post.Cmd.Infrastructure.Repositories
         {
             _mongoClient = mongoClient;
             var mongoDatabase = _mongoClient.GetDatabase(config.Value.Database);
-            _outboxCollection = mongoDatabase.GetCollection<OutboxMessage>(config.Value.OutboxCollection);
+            _outboxCollection = mongoDatabase.GetCollection<OutboxMessage>("outbox");
         }
 
         public async Task SaveAsync(OutboxMessage message, IClientSessionHandle session = null)

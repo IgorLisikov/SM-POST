@@ -19,7 +19,7 @@ public class EventStoreRepository : IEventStoreRepository
     {
         _mongoClient = mongoClient;
         var mongoDatabase = _mongoClient.GetDatabase(config.Value.Database);        // get object to access database, param - DB name
-        _eventStoreCollection = mongoDatabase.GetCollection<EventModel>(config.Value.Collection);  // get object to access collection; param - collection name
+        _eventStoreCollection = mongoDatabase.GetCollection<EventModel>("eventStore");  // get object to access collection; param - collection name
     }
 
     public async Task<List<EventModel>> FindByAggregateId(Guid aggregateId)

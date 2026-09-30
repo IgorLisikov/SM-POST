@@ -92,7 +92,10 @@ services:
       context: .
       dockerfile: Post.Cmd/Post.Cmd.Api/Dockerfile
     environment:
-      - KAFKA_TOPIC=SocialMediaPostEvents
+      Kafka__BootstrapServers: kafka:9092
+      KafkaTopics__SocialMediaPostEvents: SocialMediaPostEvents
+      MongoDB__ConnectionString: mongodb://mongo:27017
+      MongoDB__Database: socialMedia
     ports:
       - "5010:80"
     restart: unless-stopped
@@ -111,7 +114,10 @@ services:
       context: .
       dockerfile: Post.Query/Post.Query.Api/Dockerfile
     environment:
-      - KAFKA_TOPIC=SocialMediaPostEvents
+      Kafka__BootstrapServers: kafka:9092
+      KafkaTopics__SocialMediaPostEvents: SocialMediaPostEvents
+      Kafka__GroupId: SM_Consumer
+      ConnectionStrings__SqlServer: Server=sql-server,1433;Database=SocialMedia;User Id=sa;Password=StrongP@ssw0rd!
     ports:
       - "5011:80"
     restart: unless-stopped

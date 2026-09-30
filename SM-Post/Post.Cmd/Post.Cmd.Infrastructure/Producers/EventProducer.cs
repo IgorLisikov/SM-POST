@@ -1,24 +1,29 @@
-using System.Text.Json;
 using Confluent.Kafka;
 using CQRS.Core.Events;
 using CQRS.Core.Producers;
 using Microsoft.Extensions.Options;
+using Post.Common.Configs;
+using System.Text.Json;
 
 namespace Post.Cmd.Infrastructure.Producers;
 
 // Wrapper over Kafka IProducer, produces events to queue
 public class EventProducer : IEventProducer
 {
-    private readonly ProducerConfig _config;
-    public EventProducer(IOptions<ProducerConfig> config)
+    private readonly ProducerConfig _producerConfig;
+
+    public EventProducer(IOptions<KafkaConfig> kafkaConfig)
     {
-        _config = config.Value;
+        _producerConfig = new ProducerConfig
+        {
+            BootstrapServers = kafkaConfig.Value.BootstrapServers,
+        };
     }
 
 
     public async Task ProduceAsync<T>(string topic, T @event) where T : BaseEvent
     {
-        using var producer = new ProducerBuilder<string, string>(_config)
+        using var producer = new ProducerBuilder<string, string>(_producerConfig)
             .SetKeySerializer(Serializers.Utf8)
             .SetValueSerializer(Serializers.Utf8)
             .Build();

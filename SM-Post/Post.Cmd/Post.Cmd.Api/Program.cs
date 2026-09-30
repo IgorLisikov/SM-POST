@@ -1,4 +1,3 @@
-using Confluent.Kafka;
 using CQRS.Core.Domain;
 using CQRS.Core.Events;
 using CQRS.Core.Handlers;
@@ -16,6 +15,7 @@ using Post.Cmd.Infrastructure.Outbox;
 using Post.Cmd.Infrastructure.Producers;
 using Post.Cmd.Infrastructure.Repositories;
 using Post.Cmd.Infrastructure.Stores;
+using Post.Common.Configs;
 using Post.Common.Events;
 using System.Reflection;
 
@@ -32,10 +32,9 @@ BsonClassMap.RegisterClassMap<CommentUpdatedEvent>();
 BsonClassMap.RegisterClassMap<CommentRemovedEvent>();
 BsonClassMap.RegisterClassMap<PostRemovedEvent>();
 
-// Add services to the container.
-// The order is important:
-builder.Services.Configure<MongoDbConfig>(builder.Configuration.GetSection(nameof(MongoDbConfig)));
-builder.Services.Configure<ProducerConfig>(builder.Configuration.GetSection(nameof(ProducerConfig)));
+builder.Services.Configure<MongoDbConfig>(builder.Configuration.GetSection("MongoDb"));
+builder.Services.Configure<KafkaConfig>(builder.Configuration.GetSection("Kafka"));
+builder.Services.Configure<KafkaTopics>(builder.Configuration.GetSection(nameof(KafkaTopics)));
 builder.Services.AddScoped<IEventStoreRepository, EventStoreRepository>();
 builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
 builder.Services.AddScoped<IEventProducer, EventProducer>();

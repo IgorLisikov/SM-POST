@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Post.Common.Configs;
 using Post.Common.Converters;
 using Post.Query.Domain.Entities;
 using Post.Query.Domain.Repositories;
@@ -16,24 +17,33 @@ namespace Post.Query.Infrastructure.Consumers
     public class ConsumerHostedService : BackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly ConsumerConfig _config;
+        private readonly KafkaConfig _kafkaConfig;
+        private readonly KafkaTopics _kafkaTopics;
 
-        public ConsumerHostedService(IServiceProvider serviceProvider, IOptions<ConsumerConfig> config)
+        public ConsumerHostedService(IServiceProvider serviceProvider, IOptions<KafkaConfig> kafkaConfig, IOptions<KafkaTopics> kafkaTopics)
         {
             _serviceProvider = serviceProvider;
-            _config = config.Value;
+            _kafkaConfig = kafkaConfig.Value;
+            _kafkaTopics = kafkaTopics.Value;
         }
 
         protected override async Task ExecuteAsync(CancellationToken token)
         {
-            var topic = Environment.GetEnvironmentVariable("KAFKA_TOPIC");
+            var consumerConfig = new ConsumerConfig
+            {
+                BootstrapServers = _kafkaConfig.BootstrapServers,
+                GroupId = _kafkaConfig.GroupId,
+                EnableAutoCommit = _kafkaConfig.EnableAutoCommit,
+                AutoOffsetReset = Enum.Parse<AutoOffsetReset>(_kafkaConfig.AutoOffsetReset),
+                AllowAutoCreateTopics = _kafkaConfig.AllowAutoCreateTopics
+            };
 
-            using var consumer = new ConsumerBuilder<string, string>(_config)  // Don’t register Kafka consumers in DI as singleton or scoped.
+            using var consumer = new ConsumerBuilder<string, string>(consumerConfig)  // Don’t register Kafka consumers in DI as singleton or scoped.
                 .SetKeyDeserializer(Deserializers.Utf8)                        // Create them manually where needed, and dispose them properly.
                 .SetValueDeserializer(Deserializers.Utf8)
                 .Build();
 
-            consumer.Subscribe(topic);
+            consumer.Subscribe(_kafkaTopics.SocialMediaPostEvents);
 
             while (!token.IsCancellationRequested)
             {

@@ -1,4 +1,3 @@
-using Confluent.Kafka;
 using Microsoft.EntityFrameworkCore;
 using Post.Query.Domain.Repositories;
 using Post.Query.Infrastructure.Consumers;
@@ -8,6 +7,7 @@ using Post.Query.Infrastructure.Repositories;
 using System.Reflection;
 using MediatR;
 using EventHandler = Post.Query.Infrastructure.Handlers.EventHandler;
+using Post.Common.Configs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,7 +29,8 @@ builder.Services.AddScoped<IPostRepository, PostRepository>();
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<IProcessedEventRepository, ProcessedEventRepository>();
 builder.Services.AddScoped<IEventHandler, EventHandler>();
-builder.Services.Configure<ConsumerConfig>(builder.Configuration.GetSection(nameof(ConsumerConfig)));
+builder.Services.Configure<KafkaConfig>(builder.Configuration.GetSection("Kafka"));
+builder.Services.Configure<KafkaTopics>(builder.Configuration.GetSection(nameof(KafkaTopics)));
 builder.Services.AddHostedService<ConsumerHostedService>();
 
 
