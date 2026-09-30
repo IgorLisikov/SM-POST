@@ -90,7 +90,7 @@ namespace Post.Query.Infrastructure.Consumers
                     }
                     catch (Exception ex)
                     {
-                        await transaction.RollbackAsync(token);
+                        await transaction.RollbackAsync(CancellationToken.None);
                         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConsumerHostedService>>();
                         logger.LogError(ex, "Failed to process event {EventType} for aggregate {AggregateId} v{Version}", @event.GetType().Name, @event.Id, @event.Version);
                     }
