@@ -9,8 +9,8 @@ services:
     volumes:
       - "zookeeper_data:/bitnami"
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_CLIENT_PORT: "2181"
+      ZOOKEEPER_TICK_TIME: "2000"
     networks:
       - smPostNetwork
       
@@ -22,12 +22,12 @@ services:
     volumes:
       - "kafka_data:/bitnami"
     environment:
-      KAFKA_BROKER_ID: 1
+      KAFKA_BROKER_ID: "1"
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
     depends_on:
@@ -118,7 +118,7 @@ services:
       KafkaTopics__SocialMediaPostEvents: SocialMediaPostEvents
       Kafka__GroupId: SM_Consumer
       Sql__Server: sql-server
-      Sql__Port: 1401
+      Sql__Port: "1401"
       Sql__Database: SocialMedia
       Sql__User: sa
       Sql__Password: StrongP@ssw0rd!
