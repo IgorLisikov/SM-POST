@@ -118,7 +118,7 @@ services:
       KafkaTopics__SocialMediaPostEvents: SocialMediaPostEvents
       Kafka__GroupId: SM_Consumer
       Sql__Server: sql-server
-      Sql__Port: "1401"
+      Sql__Port: "1433"
       Sql__Database: SocialMedia
       Sql__User: sa
       Sql__Password: StrongP@ssw0rd!
