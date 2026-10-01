@@ -31,32 +31,45 @@ namespace Post.Cmd.Infrastructure.Outbox
         {
             while (!token.IsCancellationRequested)
             {
-                using (var scope = _serviceProvider.CreateScope())   // create scope on each iteration => eventHandler (Scoped) will be created; Repositories will be created
+                try
                 {
-                    var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
-                    var eventProducer = scope.ServiceProvider.GetRequiredService<IEventProducer>();
-
-                    var pending = await outboxRepository.GetUnpublishedAsync(100, token);
-                    foreach (var msg in pending)
+                    using (var scope = _serviceProvider.CreateScope())   // create scope on each iteration => eventHandler (Scoped) will be created; Repositories will be created
                     {
-                        try
-                        {
-                            var options = new JsonSerializerOptions { Converters = { new EventJsonConverter() } };
-                            var @event = JsonSerializer.Deserialize<BaseEvent>(msg.PayloadJson, options);
+                        var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
+                        var eventProducer = scope.ServiceProvider.GetRequiredService<IEventProducer>();
 
-                            await eventProducer.ProduceAsync(_kafkaTopics.SocialMediaPostEvents, @event, token);
-
-                            // The order of execution makes it at least once delivery.
-                            await outboxRepository.MarkAsPublishedAsync(msg.Id, DateTime.UtcNow, token);
-                        }
-                        catch (Exception ex)
+                        var pending = await outboxRepository.GetUnpublishedAsync(100, token);
+                        foreach (var msg in pending)
                         {
-                            _logger.LogError(ex, "Failed to publish outbox message {OutboxId}", msg.Id);
+                            try
+                            {
+                                var options = new JsonSerializerOptions { Converters = { new EventJsonConverter() } };
+                                var @event = JsonSerializer.Deserialize<BaseEvent>(msg.PayloadJson, options);
+
+                                await eventProducer.ProduceAsync(_kafkaTopics.SocialMediaPostEvents, @event, token);
+
+                                // The order of execution makes it at least once delivery.
+                                await outboxRepository.MarkAsPublishedAsync(msg.Id, DateTime.UtcNow, token);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Failed to publish outbox message {OutboxId}", msg.Id);
+                            }
                         }
                     }
-                }
 
-                await Task.Delay(TimeSpan.FromSeconds(5), token);
+                    await Task.Delay(TimeSpan.FromSeconds(5), token);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("Outbox Publisher cancelled.");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Outbox Publisher failed.");
+                    await Task.Delay(TimeSpan.FromSeconds(5), token);
+                }
             }
         }
     }

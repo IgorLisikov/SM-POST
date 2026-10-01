@@ -19,12 +19,18 @@ namespace Post.Query.Infrastructure.Consumers
         private readonly IServiceProvider _serviceProvider;
         private readonly KafkaConfig _kafkaConfig;
         private readonly KafkaTopics _kafkaTopics;
+        private readonly ILogger<ConsumerHostedService> _logger;
 
-        public ConsumerHostedService(IServiceProvider serviceProvider, IOptions<KafkaConfig> kafkaConfig, IOptions<KafkaTopics> kafkaTopics)
+        public ConsumerHostedService(
+            IServiceProvider serviceProvider,
+            IOptions<KafkaConfig> kafkaConfig,
+            IOptions<KafkaTopics> kafkaTopics,
+            ILogger<ConsumerHostedService> logger)
         {
             _serviceProvider = serviceProvider;
             _kafkaConfig = kafkaConfig.Value;
             _kafkaTopics = kafkaTopics.Value;
+            _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken token)
@@ -47,53 +53,67 @@ namespace Post.Query.Infrastructure.Consumers
 
             while (!token.IsCancellationRequested)
             {
-                var consumeResult = consumer.Consume(token);    // Consume() blocks until consumeResult is returned
-                if (consumeResult?.Message == null) continue;
-
-                var options = new JsonSerializerOptions { Converters = { new EventJsonConverter() } };
-                var @event = JsonSerializer.Deserialize<BaseEvent>(consumeResult.Message.Value, options);
-
-                using (var scope = _serviceProvider.CreateScope())
+                try
                 {
-                    var eventHandler = scope.ServiceProvider.GetRequiredService<IEventHandler>();
-                    var handlerMethod = eventHandler.GetType().GetMethod("On", new[] { @event.GetType() });
+                    var consumeResult = consumer.Consume(token);    // Consume() blocks until consumeResult is returned
+                    if (consumeResult?.Message == null) continue;
 
-                    if (handlerMethod == null)
-                        throw new InvalidOperationException($"No handler found for event type {@event.GetType().Name}");
+                    var options = new JsonSerializerOptions { Converters = { new EventJsonConverter() } };
+                    var @event = JsonSerializer.Deserialize<BaseEvent>(consumeResult.Message.Value, options);
 
-                    var processedEventsRepo = scope.ServiceProvider.GetRequiredService<IProcessedEventRepository>();
-                    bool isAlreadyProcessed = await processedEventsRepo.Exists(@event.Id, @event.Version, token);
-                    if (isAlreadyProcessed)
+                    using (var scope = _serviceProvider.CreateScope())
                     {
-                        // commit offset and continue — this event already applied
-                        consumer.Commit(consumeResult);
-                        continue;
-                    }
+                        var eventHandler = scope.ServiceProvider.GetRequiredService<IEventHandler>();
+                        var handlerMethod = eventHandler.GetType().GetMethod("On", new[] { @event.GetType() });
 
-                    var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
-                    using var transaction = await dbContext.Database.BeginTransactionAsync(token);
-                    try
-                    {
-                        var task = (Task)handlerMethod.Invoke(eventHandler, new object[] { @event });
-                        await task;
+                        if (handlerMethod == null)
+                            throw new InvalidOperationException($"No handler found for event type {@event.GetType().Name}");
 
-                        await processedEventsRepo.CreateAsync(new ProcessedEvent
+                        var processedEventsRepo = scope.ServiceProvider.GetRequiredService<IProcessedEventRepository>();
+                        bool isAlreadyProcessed = await processedEventsRepo.Exists(@event.Id, @event.Version, token);
+                        if (isAlreadyProcessed)
                         {
-                            AggregateId = @event.Id,
-                            Version = @event.Version
-                        }, token);
+                            // commit offset and continue — this event already applied
+                            consumer.Commit(consumeResult);
+                            continue;
+                        }
 
-                        await transaction.CommitAsync(token);
+                        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+                        using var transaction = await dbContext.Database.BeginTransactionAsync(token);
+                        try
+                        {
+                            var task = (Task)handlerMethod.Invoke(eventHandler, new object[] { @event });
+                            await task;
 
-                        // Only commit Kafka offset after successful DB commit
-                        consumer.Commit(consumeResult);
+                            await processedEventsRepo.CreateAsync(new ProcessedEvent
+                            {
+                                AggregateId = @event.Id,
+                                Version = @event.Version
+                            }, token);
+
+                            await transaction.CommitAsync(token);
+
+                            // Only commit Kafka offset after successful DB commit
+                            consumer.Commit(consumeResult);
+                        }
+                        catch (Exception ex)
+                        {
+                            await transaction.RollbackAsync(CancellationToken.None);
+                            var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConsumerHostedService>>();
+                            logger.LogError(ex, "Failed to process event {EventType} for aggregate {AggregateId} v{Version}", @event.GetType().Name, @event.Id, @event.Version);
+                            throw;
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        await transaction.RollbackAsync(CancellationToken.None);
-                        var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConsumerHostedService>>();
-                        logger.LogError(ex, "Failed to process event {EventType} for aggregate {AggregateId} v{Version}", @event.GetType().Name, @event.Id, @event.Version);
-                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("Kafka Consumer cancelled.");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Kafka Consumer failed.");
+                    await Task.Delay(TimeSpan.FromSeconds(5), token);
                 }
             }
         }
