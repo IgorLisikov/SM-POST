@@ -50,7 +50,7 @@ Apply all config files from "Kubernetes" folder:
 kubectl apply -f kubernetes
 ```
 
-- **Test it**
+- **Test it**  
 Note: SQL server takes 2-3 minutes to become available
 
 Command API (Add a Post):
@@ -73,7 +73,7 @@ Temporarily get access from computer (SSMS) to sql-server Pod inside cluster:
 ```powershell
 kubectl port-forward --address 0.0.0.0 svc/sql-server-cluster-ip 1401:1433
 ```
-Connect in SSMS:
+Connect in SSMS:  
 Server name:
 ```text
 localhost,1401
@@ -132,7 +132,7 @@ SQL Server → localhost, 1401
 
 Kafka → localhost:9092
 
-- **Test it**
+- **Test it**  
 Note: SQL server takes 2-3 minutes to become available; other containers wait for it
 
 1. Direct access (bypassing Ocelot, for testing):
