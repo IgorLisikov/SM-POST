@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: query-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      component: query
+  template:
+    metadata:
+      labels:
+        component: query
+    spec:
+      containers:
+        - name: sm-post-query-api
+          image: sm-post-query-api
+          imagePullPolicy: Never
+          env:
+            - name: Kafka__BootstrapServers
+              value: kafka-cluster-ip:9092
+            - name: KafkaTopics__SocialMediaPostEvents
+              value: SocialMediaPostEvents
+            - name: Kafka__GroupId
+              value: SM_Consumer
+            - name: Sql__Server
+              value: sql-server-cluster-ip
+            - name: Sql__Port
+              value: "1433"
+            - name: Sql__Database
+              value: SocialMedia
+            - name: Sql__User
+              value: sa
+            - name: Sql__Password
+              valueFrom: 
+                secretKeyRef:
+                  name: sql-server-password  # name of a secret
+                  key: SQL_PASSWORD  # key of a key-value pair inside a secret
+          ports:
+            - containerPort: 80

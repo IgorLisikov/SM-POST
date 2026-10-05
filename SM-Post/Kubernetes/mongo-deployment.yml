@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: mongo
+  template:
+    metadata:
+      labels:
+        component: mongo
+    spec:
+      volumes:
+        - name: mongo-data
+          persistentVolumeClaim:
+            claimName: persistent-volume-claim
+      containers:
+        - name: mongo
+          image: mongo:7
+          command:
+            - mongod
+          args:
+            - "--replSet"
+            - "rs0"
+            - "--bind_ip_all"
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+              subPath: mongo
+      

@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mongo-rs-init
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: mongo-init
+        image: mongo:7
+        command:
+          - /bin/bash
+          - -c
+          - |
+            until mongosh --host mongo-cluster-ip:27017 --eval "db.adminCommand('ping')" >/dev/null 2>&1
+            do
+              echo "Waiting for Mongo..."
+              sleep 2
+            done
+
+            mongosh --host mongo-cluster-ip:27017 --eval '
+              try {
+                rs.status();
+                print("Replica set already initialized");
+              } catch (e) {
+                rs.initiate({
+                  _id: "rs0",
+                  members: [
+                    { _id: 0, host: "mongo-cluster-ip:27017" }
+                  ]
+                });
+              }
+            '

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: command-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      component: command
+  template:
+    metadata:
+      labels:
+        component: command
+    spec:
+      containers:
+        - name: sm-post-command-api
+          image: sm-post-command-api
+          imagePullPolicy: Never
+          env:
+            - name: Kafka__BootstrapServers
+              value: kafka-cluster-ip:9092
+            - name: KafkaTopics__SocialMediaPostEvents
+              value: SocialMediaPostEvents
+            - name: MongoDB__ConnectionString
+              value: mongodb://mongo-cluster-ip:27017
+            - name: MongoDB__Database
+              value: socialMedia
+          ports:
+            - containerPort: 80
+            
+      

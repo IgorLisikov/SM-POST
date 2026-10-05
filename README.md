@@ -18,7 +18,72 @@ Edit message for a post via command-api project:
 8. Background service (Kafka consumer) running in query-api project consumes the same Kafka topic  
 9. Event record is consumed by query-api project -> the changes are applied to corresponding MS SQL tables and ProcessedEvent table within transaction (Idempotent Consumer)
 
-Run this app in docker
+Run this app in Docker Desktop Kubernetes
+---
+Start kubernetes cluster in Docker
+
+Change directory to app root folder ("SM-POST")
+```powershell
+cd SM-POST  
+```
+
+Create secret:
+```powershell
+kubectl create secret generic sql-server-password --from-literal SQL_PASSWORD=StrongP@ssw0rd!
+```
+
+Check whether ingress-nginx is installed:
+```powershell
+kubectl get ns
+kubectl get pods -n ingress-nginx
+```
+
+If ingress-nginx is not installed - install it:
+```powershell
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.15.1/deploy/static/provider/cloud/deploy.yaml
+```
+
+Apply all config files from "Kubernetes" folder:
+```powershell
+kubectl apply -f kubernetes
+```
+
+- Test it
+(SQL server takes 2-3 minutes to become available)
+
+Command API (Add a Post):
+```powershell
+Invoke-WebRequest -Uri "http://localhost/commands/NewPost" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{"author":"John Doe","Message":"Hello"}'
+```
+
+Query API (Get all Posts):
+```powershell
+Invoke-WebRequest -Uri "http://localhost/queries/PostLookup" `
+  -Method GET
+```
+
+Check SQL Server database manually via SSMS (Sql Server Management Studio):
+```powershell
+kubectl port-forward --address 0.0.0.0 svc/sql-server-cluster-ip 1401:1433
+```
+Connect in SSMS:
+Server name: localhost,1401
+Login: sa
+Password: StrongP@ssw0rd!
+Database name: SocialMedia
+
+```query for data
+select top 100 * from [SocialMedia].[dbo].[Post]
+select top 100 * from [SocialMedia].[dbo].[Comment]
+select top 100 * from [SocialMedia].[dbo].[ProcessedEvent]
+```
+
+
+
+Run this app in Docker
 ---
 ```powershell
 cd SM-POST  
@@ -41,8 +106,7 @@ docker-compose up -d
   Container group will be created:  
   - sm-post
 
-Connections
----
+- Connections
 MongoDB → localhost:27017
 
 SQL Server → localhost, 1401  
@@ -51,8 +115,7 @@ SQL Server → localhost, 1401
 
 Kafka → localhost:9092
 
-Test it
----
+- Test it
 (SQL server takes 2-3 minutes to become available; other containers wait for it)
 
 1. Direct access (bypassing Ocelot, for testing):
@@ -70,7 +133,7 @@ Query API (Get all Posts):
 Invoke-WebRequest -Uri "http://localhost:5011/api/v1/PostLookup" `
   -Method GET
 ```
----
+
 2. With Ocelot Gateway → http://localhost:7006
 
 Command API (Add a Post):

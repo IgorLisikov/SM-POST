@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-service
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: 'true'
+    nginx.ingress.kubernetes.io/rewrite-target: /api/v1/$1
+spec:
+  ingressClassName: nginx
+  rules:
+      # host: sm-post.com
+    - http:
+        paths:
+          - path: /commands/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: command-cluster-ip
+                port:
+                  number: 80
+          - path: /queries/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: query-cluster-ip
+                port:
+                  number: 80

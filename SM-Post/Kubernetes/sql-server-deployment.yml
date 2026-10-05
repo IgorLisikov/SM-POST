@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sql-server-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: sql-server
+  template:
+    metadata:
+      labels:
+        component: sql-server
+    spec:
+      volumes:  # define volume and map it to PVC:
+        - name: sql-server-data
+          persistentVolumeClaim:
+            claimName: persistent-volume-claim
+      containers:
+        - name: sql-server
+          image: mcr.microsoft.com/mssql/server:2019-latest
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: SA_PASSWORD
+              valueFrom: 
+                secretKeyRef:
+                  name: sql-server-password  # name of a secret
+                  key: SQL_PASSWORD  # key of a key-value pair inside a secret
+            - name: MSSQL_PID
+              value: Express
+          ports:
+            - containerPort: 1433
+          volumeMounts:  # assign volume to container:
+            - name: sql-server-data  # name of volume
+              mountPath: /var/opt/mssql  # this path in a container resolves into volume
+              subPath: sql-server        # subfolder of PVC where volume is stored
+
+      
