@@ -22,9 +22,9 @@ Run this app in Docker Desktop Kubernetes
 ---
 Start kubernetes cluster in Docker
 
-Change directory to app root folder ("SM-POST")
+Change directory to app root folder ("SM-Post"):
 ```powershell
-cd SM-POST  
+cd SM-Post  
 ```
 
 Create secret:
@@ -35,6 +35,8 @@ kubectl create secret generic sql-server-password --from-literal SQL_PASSWORD=St
 Check whether ingress-nginx is installed:
 ```powershell
 kubectl get ns
+```
+```powershell
 kubectl get pods -n ingress-nginx
 ```
 
@@ -48,8 +50,8 @@ Apply all config files from "Kubernetes" folder:
 kubectl apply -f kubernetes
 ```
 
-- Test it
-(SQL server takes 2-3 minutes to become available)
+- **Test it**
+Note: SQL server takes 2-3 minutes to become available
 
 Command API (Add a Post):
 ```powershell
@@ -65,17 +67,32 @@ Invoke-WebRequest -Uri "http://localhost/queries/PostLookup" `
   -Method GET
 ```
 
-Check SQL Server database manually via SSMS (Sql Server Management Studio):
+- **Check SQL Server database manually via SSMS (Sql Server Management Studio)**
+
+Temporarily get access from computer (SSMS) to sql-server Pod inside cluster:
 ```powershell
 kubectl port-forward --address 0.0.0.0 svc/sql-server-cluster-ip 1401:1433
 ```
 Connect in SSMS:
-Server name: localhost,1401
-Login: sa
-Password: StrongP@ssw0rd!
-Database name: SocialMedia
+Server name:
+```text
+localhost,1401
+```
+Login:
+```text
+sa
+```
+Password:
+```text
+StrongP@ssw0rd!
+```
+Database name:
+```text
+SocialMedia
+```
 
-```query for data
+Query for data
+```text
 select top 100 * from [SocialMedia].[dbo].[Post]
 select top 100 * from [SocialMedia].[dbo].[Comment]
 select top 100 * from [SocialMedia].[dbo].[ProcessedEvent]
@@ -115,8 +132,8 @@ SQL Server → localhost, 1401
 
 Kafka → localhost:9092
 
-- Test it
-(SQL server takes 2-3 minutes to become available; other containers wait for it)
+- **Test it**
+Note: SQL server takes 2-3 minutes to become available; other containers wait for it
 
 1. Direct access (bypassing Ocelot, for testing):
 
