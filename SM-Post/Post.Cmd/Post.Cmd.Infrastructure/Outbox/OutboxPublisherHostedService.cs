@@ -38,23 +38,15 @@ namespace Post.Cmd.Infrastructure.Outbox
                         var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
                         var eventProducer = scope.ServiceProvider.GetRequiredService<IEventProducer>();
 
-                        var pending = await outboxRepository.GetUnpublishedAsync(100, token);
-                        foreach (var msg in pending)
+                        await foreach (var msg in outboxRepository.SubscribeAsync(token))
                         {
-                            try
-                            {
-                                var options = new JsonSerializerOptions { Converters = { new EventJsonConverter() } };
-                                var @event = JsonSerializer.Deserialize<BaseEvent>(msg.PayloadJson, options);
+                            // if something throws here, the subscription will be restarted after 5 seconds and the event will be processed again:
+                            var options = new JsonSerializerOptions { Converters = { new EventJsonConverter() } };
+                            var @event = JsonSerializer.Deserialize<BaseEvent>(msg.PayloadJson, options);
 
-                                await eventProducer.ProduceAsync(_kafkaTopics.SocialMediaPostEvents, @event, token);
-
-                                // The order of execution makes it at least once delivery.
-                                await outboxRepository.MarkAsPublishedAsync(msg.Id, DateTime.UtcNow, token);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "Failed to publish outbox message {OutboxId}", msg.Id);
-                            }
+                            // The order of execution makes it at least once delivery:
+                            await eventProducer.ProduceAsync(_kafkaTopics.SocialMediaPostEvents, @event, token);
+                            await outboxRepository.MarkAsPublishedAsync(msg.Id, DateTime.UtcNow, token);
                         }
                     }
 
